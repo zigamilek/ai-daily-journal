@@ -211,7 +211,7 @@ run_migrations() {
   sudo -u "${APP_USER}" env \
     AI_DAILY_JOURNAL_CONFIG="${CONFIG_FILE}" \
     AI_DAILY_JOURNAL_ENV="${ENV_FILE}" \
-    "${VENV_DIR}/bin/alembic" -c "${INSTALL_DIR}/alembic.ini" upgrade head
+    bash -lc "cd '${INSTALL_DIR}' && '${VENV_DIR}/bin/alembic' -c '${INSTALL_DIR}/alembic.ini' upgrade head"
 }
 
 install_systemd_unit() {
