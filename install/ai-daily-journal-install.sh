@@ -106,7 +106,6 @@ resolve_repo_source() {
 
   tmp_repo="/tmp/ai-daily-journal-src"
   rm -rf "${tmp_repo}"
-  log "Installer running without local repo context; cloning ${APP_REPO_URL} (${APP_REPO_REF})" >&2
   if [[ -n "${APP_REPO_REF}" && "${APP_REPO_REF}" != "HEAD" ]]; then
     git clone --depth 1 --branch "${APP_REPO_REF}" "${APP_REPO_URL}" "${tmp_repo}"
   else
@@ -118,6 +117,9 @@ resolve_repo_source() {
 sync_repo() {
   CURRENT_STEP="sync_repo"
   local repo_src
+  if [[ -z "${BASH_SOURCE[0]-}" ]] || [[ "${BASH_SOURCE[0]-}" == "bash" ]]; then
+    log "Installer running without local repo context; cloning ${APP_REPO_URL} (${APP_REPO_REF})"
+  fi
   repo_src="$(resolve_repo_source)"
   if [[ ! -d "${repo_src}" ]]; then
     fatal "Resolved repository source directory does not exist: ${repo_src}"
