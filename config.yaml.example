@@ -1,0 +1,60 @@
+server:
+  host: "0.0.0.0"
+  port: 8080
+  public_base_url: "http://127.0.0.1:8080"
+
+api_ui:
+  cors_origins:
+    - "http://127.0.0.1:5173"
+  session_cookie_name: "aijournal_session"
+  session_ttl_seconds: 86400
+
+database:
+  url_env: "AI_DAILY_JOURNAL_DB_URL"
+  pool_size: 10
+  max_overflow: 20
+  echo_sql: false
+
+ai_daily_journal_projection:
+  root_path: "./projections"
+  atomic_write_mode: true
+
+models:
+  provider: "openai_compatible"
+  coordinator:
+    model_name: "gpt-4.1-mini"
+    temperature: 0.0
+    max_retries: 2
+    base_url: "https://api.openai.com/v1"
+    api_key_env: "AI_DAILY_JOURNAL_COORDINATOR_API_KEY"
+  editor:
+    model_name: "gpt-4.1"
+    temperature: 0.0
+    max_retries: 2
+    base_url: "https://api.openai.com/v1"
+    api_key_env: "AI_DAILY_JOURNAL_EDITOR_API_KEY"
+  embeddings:
+    enabled: true
+    model_name: "text-embedding-3-small"
+    dimensions: 1536
+    base_url: "https://api.openai.com/v1"
+    api_key_env: "AI_DAILY_JOURNAL_EMBEDDINGS_API_KEY"
+
+decision:
+  dedup_similarity_threshold: 0.88
+  candidate_limit: 10
+
+logging:
+  level: "INFO"
+  format: "json"
+  log_dir: "./logs"
+  log_file_name: "ai-daily-journal.log"
+  max_bytes: 5242880
+  backup_count: 5
+
+diagnostics:
+  health_timeout_seconds: 2
+  readiness_timeout_seconds: 5
+
+runtime:
+  timezone: "Europe/Ljubljana"
