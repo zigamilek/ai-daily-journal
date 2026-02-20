@@ -1,29 +1,3 @@
-Metadata-Version: 2.4
-Name: ai-daily-journal
-Version: 0.1.0
-Summary: AI Daily Journal: DB-first journaling with safe confirm workflow.
-Requires-Python: >=3.11
-Description-Content-Type: text/markdown
-Requires-Dist: alembic>=1.14.0
-Requires-Dist: argon2-cffi>=23.1.0
-Requires-Dist: email-validator>=2.2.0
-Requires-Dist: fastapi>=0.115.0
-Requires-Dist: httpx>=0.27.0
-Requires-Dist: pgvector>=0.3.5
-Requires-Dist: psycopg[binary]>=3.2.0
-Requires-Dist: pydantic>=2.9.0
-Requires-Dist: pydantic-settings>=2.5.0
-Requires-Dist: python-dotenv>=1.0.1
-Requires-Dist: pyyaml>=6.0.2
-Requires-Dist: sqlalchemy>=2.0.36
-Requires-Dist: typer>=0.12.5
-Requires-Dist: uvicorn[standard]>=0.32.0
-Provides-Extra: dev
-Requires-Dist: pytest>=8.3.3; extra == "dev"
-Requires-Dist: pytest-cov>=5.0.0; extra == "dev"
-Requires-Dist: pytest-asyncio>=0.24.0; extra == "dev"
-Requires-Dist: ruff>=0.7.2; extra == "dev"
-
 # AI Daily Journal
 
 AI-assisted daily journaling with a DB-first architecture, explicit proposal/diff confirmation loop, and deterministic Markdown projection.

@@ -1,0 +1,20 @@
+[Unit]
+Description=AI Daily Journal service
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=ai-daily-journal
+Group=ai-daily-journal
+WorkingDirectory=/opt/ai-daily-journal
+EnvironmentFile=/etc/ai-daily-journal/.env
+Environment=AI_DAILY_JOURNAL_CONFIG=/etc/ai-daily-journal/config.yaml
+Environment=AI_DAILY_JOURNAL_ENV=/etc/ai-daily-journal/.env
+ExecStart=/opt/ai-daily-journal/.venv/bin/aijournal serve --config /etc/ai-daily-journal/config.yaml
+Restart=always
+RestartSec=3
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target
