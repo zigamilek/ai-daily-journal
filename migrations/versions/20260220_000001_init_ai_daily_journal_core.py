@@ -10,6 +10,7 @@ from __future__ import annotations
 from alembic import op
 import sqlalchemy as sa
 from pgvector.sqlalchemy import Vector
+from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "20260220_000001"
@@ -21,9 +22,15 @@ depends_on = None
 def upgrade() -> None:
     op.execute("CREATE EXTENSION IF NOT EXISTS vector")
 
-    session_status = sa.Enum("draft", "confirmed", "cancelled", name="session_status")
-    operation_action = sa.Enum("noop", "append", "update", "create", name="operation_action")
-    operation_status = sa.Enum("pending", "applied", "failed", "cancelled", name="operation_status")
+    session_status = postgresql.ENUM(
+        "draft", "confirmed", "cancelled", name="session_status", create_type=False
+    )
+    operation_action = postgresql.ENUM(
+        "noop", "append", "update", "create", name="operation_action", create_type=False
+    )
+    operation_status = postgresql.ENUM(
+        "pending", "applied", "failed", "cancelled", name="operation_status", create_type=False
+    )
     session_status.create(op.get_bind(), checkfirst=True)
     operation_action.create(op.get_bind(), checkfirst=True)
     operation_status.create(op.get_bind(), checkfirst=True)

@@ -31,3 +31,10 @@ def test_initial_migration_contains_required_tables() -> None:
         "schema_version",
     ]:
         assert table_name in text
+
+
+def test_initial_migration_uses_non_duplicating_enum_strategy() -> None:
+    migration = Path("migrations/versions/20260220_000001_init_ai_daily_journal_core.py")
+    text = migration.read_text(encoding="utf-8")
+    assert "postgresql.ENUM(" in text
+    assert "create_type=False" in text
