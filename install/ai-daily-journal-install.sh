@@ -16,6 +16,8 @@ ENV_FILE="${CONFIG_DIR}/.env"
 DB_NAME="${AI_DAILY_JOURNAL_DB_NAME:-ai_daily_journal}"
 DB_USER="${AI_DAILY_JOURNAL_DB_USER:-ai_daily_journal}"
 DB_PASSWORD="${AI_DAILY_JOURNAL_DB_PASSWORD:-}"
+APP_REPO_URL="${REPO_URL:-https://github.com/zigamilek/ai-daily-journal.git}"
+APP_REPO_REF="${REPO_REF:-master}"
 
 CURRENT_STEP=""
 
@@ -56,14 +58,23 @@ install_packages() {
 install_pgvector() {
   CURRENT_STEP="install_pgvector"
   log "Ensuring pgvector extension is available"
-  if apt-get install -y --no-install-recommends postgresql-15-pgvector; then
-    return
+  local pg_major pkg_name
+  pg_major="$(psql --version | awk '{print $3}' | cut -d. -f1)"
+  for pkg_name in "postgresql-${pg_major}-pgvector" "postgresql-pgvector"; do
+    if apt-get install -y --no-install-recommends "${pkg_name}"; then
+      log "Installed pgvector package: ${pkg_name}"
+      return
+    fi
+  done
+  log "pgvector package unavailable, building from source"
+  apt-get install -y --no-install-recommends "postgresql-server-dev-${pg_major}" make gcc
+  if ! getent hosts github.com >/dev/null 2>&1; then
+    fatal "Cannot resolve github.com from container. Configure DNS/network and re-run installer."
   fi
-  log "Package postgresql-15-pgvector unavailable, building from source"
-  apt-get install -y --no-install-recommends postgresql-server-dev-15 make gcc
   local tmpdir
   tmpdir="$(mktemp -d)"
-  git clone --depth 1 https://github.com/pgvector/pgvector.git "${tmpdir}/pgvector"
+  git clone --depth 1 https://github.com/pgvector/pgvector.git "${tmpdir}/pgvector" \
+    || fatal "Failed to fetch pgvector source from GitHub. Check container network/firewall."
   make -C "${tmpdir}/pgvector"
   make -C "${tmpdir}/pgvector" install
   rm -rf "${tmpdir}"
@@ -81,11 +92,33 @@ ensure_user_and_dirs() {
   install -d -o "${APP_USER}" -g "${APP_GROUP}" -m 0755 "${DATA_DIR}"
 }
 
+resolve_repo_source() {
+  local script_path script_dir candidate tmp_repo
+  script_path="${BASH_SOURCE[0]-}"
+  if [[ -n "${script_path}" ]]; then
+    script_dir="$(cd "$(dirname "${script_path}")" && pwd)"
+    candidate="$(cd "${script_dir}/.." && pwd)"
+    if [[ -f "${candidate}/pyproject.toml" ]]; then
+      echo "${candidate}"
+      return
+    fi
+  fi
+
+  tmp_repo="/tmp/ai-daily-journal-src"
+  rm -rf "${tmp_repo}"
+  log "Installer running without local repo context; cloning ${APP_REPO_URL} (${APP_REPO_REF})"
+  if [[ -n "${APP_REPO_REF}" && "${APP_REPO_REF}" != "HEAD" ]]; then
+    git clone --depth 1 --branch "${APP_REPO_REF}" "${APP_REPO_URL}" "${tmp_repo}"
+  else
+    git clone --depth 1 "${APP_REPO_URL}" "${tmp_repo}"
+  fi
+  echo "${tmp_repo}"
+}
+
 sync_repo() {
   CURRENT_STEP="sync_repo"
-  local script_dir repo_src
-  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  repo_src="$(cd "${script_dir}/.." && pwd)"
+  local repo_src
+  repo_src="$(resolve_repo_source)"
   log "Syncing repository to ${INSTALL_DIR} from ${repo_src}"
   if command -v rsync >/dev/null 2>&1; then
     rsync -a --delete --exclude '.git' "${repo_src}/" "${INSTALL_DIR}/"
