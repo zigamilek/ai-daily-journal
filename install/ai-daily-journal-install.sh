@@ -103,6 +103,12 @@ setup_venv() {
   sudo -u "${APP_USER}" "${VENV_DIR}/bin/pip" install -e "${INSTALL_DIR}[dev]"
 }
 
+install_cli_symlink() {
+  CURRENT_STEP="install_cli_symlink"
+  log "Installing CLI symlink"
+  ln -sf "${VENV_DIR}/bin/aijournal" /usr/local/bin/aijournal
+}
+
 set_env_key() {
   local key="$1" value="$2" file="$3"
   if grep -q "^${key}=" "${file}"; then
@@ -226,6 +232,7 @@ main() {
   ensure_user_and_dirs
   sync_repo
   setup_venv
+  install_cli_symlink
   write_default_config_non_destructive
   setup_database
   run_migrations
