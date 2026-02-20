@@ -49,7 +49,7 @@ install_packages() {
   log "Installing OS dependencies"
   apt-get update -y
   apt-get install -y --no-install-recommends \
-    ca-certificates curl git jq \
+    ca-certificates curl git jq rsync \
     python3 python3-venv python3-pip python3-dev \
     build-essential libpq-dev \
     postgresql postgresql-contrib
@@ -106,7 +106,7 @@ resolve_repo_source() {
 
   tmp_repo="/tmp/ai-daily-journal-src"
   rm -rf "${tmp_repo}"
-  log "Installer running without local repo context; cloning ${APP_REPO_URL} (${APP_REPO_REF})"
+  log "Installer running without local repo context; cloning ${APP_REPO_URL} (${APP_REPO_REF})" >&2
   if [[ -n "${APP_REPO_REF}" && "${APP_REPO_REF}" != "HEAD" ]]; then
     git clone --depth 1 --branch "${APP_REPO_REF}" "${APP_REPO_URL}" "${tmp_repo}"
   else
@@ -119,6 +119,9 @@ sync_repo() {
   CURRENT_STEP="sync_repo"
   local repo_src
   repo_src="$(resolve_repo_source)"
+  if [[ ! -d "${repo_src}" ]]; then
+    fatal "Resolved repository source directory does not exist: ${repo_src}"
+  fi
   log "Syncing repository to ${INSTALL_DIR} from ${repo_src}"
   if command -v rsync >/dev/null 2>&1; then
     rsync -a --delete --exclude '.git' "${repo_src}/" "${INSTALL_DIR}/"
