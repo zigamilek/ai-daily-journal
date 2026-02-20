@@ -12,12 +12,12 @@ coverage.xml
 
 node_modules/
 web/dist/
+web/tsconfig.tsbuildinfo
 
 .env
 config.yaml
 
 logs/
-projections/
 
 .DS_Store
 .cursor/

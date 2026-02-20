@@ -28,11 +28,6 @@ class DatabaseConfig(StrictModel):
     echo_sql: bool = False
 
 
-class ProjectionConfig(StrictModel):
-    root_path: str = "./projections"
-    atomic_write_mode: bool = True
-
-
 class SingleModelRoleConfig(StrictModel):
     model_name: str
     temperature: float = Field(default=0.0, ge=0.0, le=2.0)
@@ -92,7 +87,6 @@ class AppConfig(StrictModel):
     server: ServerConfig
     api_ui: ApiUIConfig
     database: DatabaseConfig
-    ai_daily_journal_projection: ProjectionConfig
     models: ModelsConfig
     decision: DecisionConfig
     logging: LoggingConfig

@@ -64,7 +64,7 @@ body {
 }
 
 .diff-viewer,
-.markdown-preview {
+.day-preview {
   overflow: auto;
   max-width: 100%;
   border: 1px solid #6664;
@@ -78,6 +78,11 @@ body {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
+}
+
+.row-between {
+  justify-content: space-between;
+  align-items: center;
 }
 
 .muted {

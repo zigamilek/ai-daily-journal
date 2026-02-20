@@ -8,7 +8,6 @@ INSTALL_DIR="/opt/ai-daily-journal"
 CONFIG_DIR="/etc/ai-daily-journal"
 LOG_DIR="/var/log/ai-daily-journal"
 DATA_DIR="/var/lib/ai-daily-journal"
-PROJECTION_DIR="${DATA_DIR}/projections"
 VENV_DIR="${INSTALL_DIR}/.venv"
 SYSTEMD_UNIT_DEST="/etc/systemd/system/ai-daily-journal.service"
 CONFIG_FILE="${CONFIG_DIR}/config.yaml"
@@ -79,7 +78,7 @@ ensure_user_and_dirs() {
   install -d -o "${APP_USER}" -g "${APP_GROUP}" -m 0755 "${INSTALL_DIR}"
   install -d -o "${APP_USER}" -g "${APP_GROUP}" -m 0755 "${CONFIG_DIR}"
   install -d -o "${APP_USER}" -g "${APP_GROUP}" -m 0755 "${LOG_DIR}"
-  install -d -o "${APP_USER}" -g "${APP_GROUP}" -m 0755 "${PROJECTION_DIR}"
+  install -d -o "${APP_USER}" -g "${APP_GROUP}" -m 0755 "${DATA_DIR}"
 }
 
 sync_repo() {
@@ -119,7 +118,6 @@ write_default_config_non_destructive() {
 
   if [[ ! -f "${CONFIG_FILE}" ]]; then
     cp "${INSTALL_DIR}/config.yaml.example" "${CONFIG_FILE}"
-    sed -i "s|root_path: \"./projections\"|root_path: \"${PROJECTION_DIR}\"|" "${CONFIG_FILE}"
     sed -i "s|log_dir: \"./logs\"|log_dir: \"${LOG_DIR}\"|" "${CONFIG_FILE}"
     chown "${APP_USER}:${APP_GROUP}" "${CONFIG_FILE}"
   fi
@@ -215,7 +213,7 @@ AI Daily Journal installation complete.
 - Env: ${ENV_FILE}
 - App dir: ${INSTALL_DIR}
 - Logs: ${LOG_DIR}
-- Projections: ${PROJECTION_DIR}
+- Data dir: ${DATA_DIR}
 - Health URL: http://127.0.0.1:8080/healthz
 
 EOF

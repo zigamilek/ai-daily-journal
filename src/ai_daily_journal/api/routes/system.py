@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from pathlib import Path
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
@@ -56,7 +55,6 @@ def diagnostics(request: Request) -> dict[str, object]:
     except Exception as exc:  # noqa: BLE001
         payload["db_ready"] = False
         payload["db_error"] = str(exc)
-    payload["projection_root"] = str(Path(cfg.ai_daily_journal_projection.root_path).resolve())
     payload["models"] = {
         "coordinator": cfg.models.coordinator.model_name,
         "editor": cfg.models.editor.model_name,

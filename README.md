@@ -1,11 +1,11 @@
 # AI Daily Journal
 
-AI-assisted daily journaling with a DB-first architecture, explicit proposal/diff confirmation loop, and deterministic Markdown projection.
+AI-assisted daily journaling with a DB-first architecture and explicit proposal/diff confirmation workflow.
 
 ## Core Principles
 
-- Canonical source of truth is PostgreSQL (not Markdown files).
-- Markdown files are one-way projections: DB -> `YYYY-MM-DD.md`.
+- Canonical source of truth is PostgreSQL.
+- Day content shown in UI is rendered directly from DB entries.
 - Proposal is shown before write; DB write only happens after explicit confirm.
 - Slovenian output is enforced for event text generation.
 - Idempotency and operation audit records are built into write confirmations.
@@ -87,7 +87,6 @@ Key sections:
 - `server`
 - `api_ui`
 - `database`
-- `ai_daily_journal_projection`
 - `models` (`coordinator`, `editor`, `embeddings`)
 - `decision`
 - `logging`
@@ -127,7 +126,7 @@ aijournal logs --file
 5. Editor generates proposed Slovenian event text.
 6. Unified diff is generated and returned.
 7. On confirm, transaction applies operation + idempotency check.
-8. Markdown projection is regenerated atomically.
+8. Final day content is rendered from committed DB state.
 
 ## Automated Tests
 
@@ -145,7 +144,7 @@ Coverage includes:
 - Proposal/diff generation
 - Confirm loop revisions
 - Idempotency protection
-- Projection consistency
+- Day-content rendering consistency
 - CLI behavior
 - Migration metadata compatibility
 

@@ -55,6 +55,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ text, session_id: sessionId, instruction })
     }),
+  proposeDayEdit: (dayDate: string, content: string, sessionId?: number) =>
+    req<ProposalResponse>(`/api/journal/days/${dayDate}/edit-propose`, {
+      method: "POST",
+      body: JSON.stringify({ content, session_id: sessionId })
+    }),
   confirm: (sessionId: number, idempotencyKey: string) =>
     req<{ status: string; day_date: string; final_content: string }>("/api/journal/confirm", {
       method: "POST",

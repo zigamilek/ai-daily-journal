@@ -8,11 +8,11 @@ from ai_daily_journal.services.write_flow import JournalWriteService
 
 
 def test_unified_diff_generation() -> None:
-    current = "# Dnevnik 2026-02-20\n\n1. Tekel sem.\n"
-    proposed = "# Dnevnik 2026-02-20\n\n1. Tekel sem.\n2. Bral sem knjigo.\n"
-    diff = generate_unified_diff(current, proposed, file_label="2026-02-20.md")
-    assert "--- a/2026-02-20.md" in diff
-    assert "+++ b/2026-02-20.md" in diff
+    current = "Dnevnik za 2026-02-20\n\n1. Tekel sem.\n"
+    proposed = "Dnevnik za 2026-02-20\n\n1. Tekel sem.\n2. Bral sem knjigo.\n"
+    diff = generate_unified_diff(current, proposed, file_label="day/2026-02-20")
+    assert "--- a/day/2026-02-20" in diff
+    assert "+++ b/day/2026-02-20" in diff
     assert "+2. Bral sem knjigo." in diff
 
 
@@ -40,4 +40,4 @@ def test_proposal_contains_diff_before_confirm(db_session, test_config, test_use
     )
     assert "diff_text" in result
     assert result["session_id"] is not None
-    assert "Dnevnik 2026-02-20" in result["diff_text"]
+    assert "Dnevnik za 2026-02-20" in result["diff_text"]

@@ -15,10 +15,6 @@ database:
   max_overflow: 20
   echo_sql: false
 
-ai_daily_journal_projection:
-  root_path: "./projections"
-  atomic_write_mode: true
-
 models:
   provider: "openai_compatible"
   coordinator:

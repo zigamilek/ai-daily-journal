@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from pathlib import Path
+from datetime import date as date_cls, datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -20,12 +19,12 @@ from ai_daily_journal.db.models import (
 )
 from ai_daily_journal.schemas.coordinator import Action
 from ai_daily_journal.services.coordinator import CoordinatorContext, CoordinatorService
+from ai_daily_journal.services.day_content import parse_day_edit_text, render_day_text
 from ai_daily_journal.services.date_resolution import resolve_target_date
 from ai_daily_journal.services.diffing import generate_unified_diff
 from ai_daily_journal.services.editor import EditorContext, EditorService
 from ai_daily_journal.services.history_hygiene import sanitize_model_text
 from ai_daily_journal.services.model_client import OpenAICompatibleClient
-from ai_daily_journal.services.projection_renderer import render_day_markdown
 from ai_daily_journal.services.semantic_search import SemanticSearchService, semantic_relation
 from ai_daily_journal.services.write_transaction import WriteTransactionService
 from ai_daily_journal.paths import default_env_path
@@ -241,14 +240,14 @@ class JournalWriteService:
         )
         proposed_entries = editor_result.entries
 
-        current_markdown = render_day_markdown(resolved, [entry.event_text_sl for entry in active_entries])
-        proposed_markdown = render_day_markdown(
+        current_day_text = render_day_text(resolved, [entry.event_text_sl for entry in active_entries])
+        proposed_day_text = render_day_text(
             resolved, [str(entry["event_text_sl"]) for entry in proposed_entries]
         )
         diff_text = generate_unified_diff(
-            current_markdown,
-            proposed_markdown,
-            file_label=f"{resolved.isoformat()}.md",
+            current_day_text,
+            proposed_day_text,
+            file_label=f"day/{resolved.isoformat()}",
         )
         op = WriteOperation(
             session_id=session.id,
@@ -284,12 +283,121 @@ class JournalWriteService:
             "warnings": self.model_warnings + coordinator_result.warnings + editor_result.warnings,
         }
 
+    def propose_day_edit(
+        self,
+        *,
+        user_id: int,
+        day_date: str,
+        edited_content: str,
+        session_id: int | None,
+    ) -> dict[str, object]:
+        target_day = date_cls.fromisoformat(day_date)
+        user = self.db.get(User, user_id)
+        if user is None:
+            raise ValueError("User not found")
+
+        if session_id is None:
+            session = WriteSession(user_id=user_id, day_date=target_day, status=SessionStatus.draft)
+            self.db.add(session)
+            self.db.flush()
+        else:
+            session = self.db.execute(
+                select(WriteSession).where(
+                    WriteSession.id == session_id,
+                    WriteSession.user_id == user_id,
+                )
+            ).scalar_one_or_none()
+            if session is None:
+                raise ValueError("Write session not found")
+            if session.day_date != target_day:
+                raise ValueError("Write session day does not match selected day")
+
+        day = self.db.execute(
+            select(JournalDay).where(
+                JournalDay.user_id == user_id,
+                JournalDay.day_date == target_day,
+            )
+        ).scalar_one_or_none()
+        active_entries: list[JournalEntry] = []
+        if day is not None:
+            active_entries = list(
+                self.db.execute(
+                    select(JournalEntry)
+                    .where(
+                        JournalEntry.day_id == day.id,
+                        JournalEntry.superseded_by_entry_id.is_(None),
+                    )
+                    .order_by(JournalEntry.sequence_no.asc())
+                ).scalars()
+            )
+
+        sanitized = sanitize_model_text(edited_content)
+        proposed_events = parse_day_edit_text(sanitized)
+        current_events = [entry.event_text_sl for entry in active_entries]
+
+        if current_events == proposed_events:
+            action = Action.noop
+            reason = "Urejanje dneva ne uvaja sprememb."
+        elif not current_events and proposed_events:
+            action = Action.create
+            reason = "Ustvarjen bo prvi vnos za izbran dan."
+        else:
+            action = Action.update
+            reason = "Ročno urejanje bo posodobilo vse vnose izbranega dne."
+
+        proposed_entries = [
+            {
+                "sequence_no": idx + 1,
+                "event_text_sl": event,
+                "source_user_text": event,
+                "updated_from_entry_id": None,
+            }
+            for idx, event in enumerate(proposed_events)
+        ]
+
+        diff_text = generate_unified_diff(
+            render_day_text(target_day, current_events),
+            render_day_text(target_day, proposed_events),
+            file_label=f"day/{target_day.isoformat()}",
+        )
+        op = WriteOperation(
+            session_id=session.id,
+            action=OperationAction(action.value),
+            decision_json={
+                "resolved_date": target_day.isoformat(),
+                "action": action.value,
+                "candidate_entry_ids": [],
+                "reason": reason,
+                "manual_edit": True,
+                "replace_all": True,
+            },
+            proposed_entries_json=proposed_entries,
+            diff_text=diff_text,
+            status=OperationStatus.pending,
+        )
+        self.db.add(op)
+        self.db.commit()
+        self.db.refresh(op)
+        self.db.refresh(session)
+        return {
+            "session_id": session.id,
+            "operation_id": op.id,
+            "resolved_date": target_day.isoformat(),
+            "action": action.value,
+            "reason": reason,
+            "candidate_entry_ids": [],
+            "semantic_relation": "manual_edit",
+            "semantic_candidates": [],
+            "proposed_entries": proposed_entries,
+            "diff_text": diff_text,
+            "warnings": [],
+        }
+
     def confirm(self, *, user_id: int, session_id: int, idempotency_key: str) -> dict[str, object]:
         return self.write_tx.confirm(
             user_id=user_id,
             session_id=session_id,
             idempotency_key=idempotency_key,
-            projection_root=Path(self.config.ai_daily_journal_projection.root_path).resolve(),
         )
 
     def cancel(self, *, user_id: int, session_id: int) -> dict[str, object]:

@@ -5,6 +5,7 @@ import { SidebarTree } from "../components/SidebarTree";
 import { WriteComposer } from "../components/WriteComposer";
 
 type Me = { id: number; email: string; timezone: string };
+type ProposalMode = "entry" | "day-edit";
 
 function randomKey() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -18,8 +19,11 @@ export function AppShell() {
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [content, setContent] = useState("");
   const [proposal, setProposal] = useState<ProposalResponse | null>(null);
+  const [proposalMode, setProposalMode] = useState<ProposalMode>("entry");
   const [lastInputText, setLastInputText] = useState("");
   const [revisionInstruction, setRevisionInstruction] = useState("");
+  const [dayEditOpen, setDayEditOpen] = useState(false);
+  const [dayEditText, setDayEditText] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   async function refresh() {
@@ -47,6 +51,8 @@ export function AppShell() {
     const file = await api.dayFile(day);
     setSelectedDay(day);
     setContent(file.content);
+    setDayEditOpen(false);
+    setDayEditText(file.content);
   }
 
   async function onPropose(text: string, instruction?: string) {
@@ -55,6 +61,23 @@ export function AppShell() {
       setLastInputText(text);
       const next = await api.propose(text, proposal?.session_id, instruction);
       setProposal(next);
+      setProposalMode("entry");
+    } catch (err) {
+      setError(String(err));
+    }
+  }
+
+  async function onProposeDayEdit() {
+    if (!selectedDay) return;
+    try {
+      setError(null);
+      const next = await api.proposeDayEdit(
+        selectedDay,
+        dayEditText,
+        proposalMode === "day-edit" ? proposal?.session_id : undefined
+      );
+      setProposal(next);
+      setProposalMode("day-edit");
     } catch (err) {
       setError(String(err));
     }
@@ -64,8 +87,11 @@ export function AppShell() {
     if (!proposal) return;
     const response = await api.confirm(proposal.session_id, randomKey());
     setProposal(null);
+    setProposalMode("entry");
     setSelectedDay(response.day_date);
     setContent(response.final_content);
+    setDayEditText(response.final_content);
+    setDayEditOpen(false);
     await refresh();
   }
 
@@ -73,12 +99,18 @@ export function AppShell() {
     if (!proposal) return;
     await api.cancel(proposal.session_id);
     setProposal(null);
+    setProposalMode("entry");
     setRevisionInstruction("");
   }
 
   async function onRevise() {
+    if (proposalMode !== "entry") return;
     if (!proposal) return;
-    const baseText = lastInputText || proposal.proposed_entries.at(-1)?.source_user_text || "";
+    const lastEntry =
+      proposal.proposed_entries.length > 0
+        ? proposal.proposed_entries[proposal.proposed_entries.length - 1]
+        : undefined;
+    const baseText = lastInputText || lastEntry?.source_user_text || "";
     if (!baseText.trim()) return;
     const next = await api.propose(baseText, proposal.session_id, revisionInstruction || undefined);
     setProposal(next);
@@ -144,21 +176,48 @@ export function AppShell() {
                 ))}
               </ul>
             ) : null}
-            <input
-              value={revisionInstruction}
-              onChange={(e) => setRevisionInstruction(e.target.value)}
-              placeholder="Navodilo za popravek (npr. bolj jedrnato)"
-            />
+            {proposalMode === "entry" && (
+              <input
+                value={revisionInstruction}
+                onChange={(e) => setRevisionInstruction(e.target.value)}
+                placeholder="Navodilo za popravek (npr. bolj jedrnato)"
+              />
+            )}
             <div className="row">
               <button onClick={() => void onConfirm()}>Potrdi</button>
-              <button onClick={() => void onRevise()}>Zahtevaj spremembe</button>
+              {proposalMode === "entry" && (
+                <button onClick={() => void onRevise()}>Zahtevaj spremembe</button>
+              )}
               <button onClick={() => void onCancel()}>Prekliči</button>
             </div>
           </section>
         )}
         <section>
-          <h2>{dayTitle}</h2>
-          <pre className="markdown-preview">{content}</pre>
+          <div className="row row-between">
+            <h2>{dayTitle}</h2>
+            <button
+              disabled={!selectedDay}
+              onClick={() => {
+                setDayEditOpen((prev) => !prev);
+                setDayEditText(content);
+              }}
+            >
+              {dayEditOpen ? "Zapri urejanje" : "Uredi dan"}
+            </button>
+          </div>
+          {dayEditOpen && (
+            <section className="composer">
+              <h3>Uredi vsebino dneva</h3>
+              <textarea
+                value={dayEditText}
+                onChange={(e) => setDayEditText(e.target.value)}
+                rows={8}
+                placeholder="Uredi vnose dneva ..."
+              />
+              <button onClick={() => void onProposeDayEdit()}>Predlagaj ureditev dneva</button>
+            </section>
+          )}
+          <pre className="day-preview">{content}</pre>
         </section>
       </main>
     </div>

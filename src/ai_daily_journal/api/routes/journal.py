@@ -26,6 +26,11 @@ class CancelRequest(BaseModel):
     session_id: int
 
 
+class DayEditRequest(BaseModel):
+    content: str = Field(min_length=0, max_length=12000)
+    session_id: int | None = None
+
+
 def _current_user_id(request: Request) -> int:
     cfg = request.app.state.config
     if cfg is None:
@@ -86,6 +91,24 @@ def propose(payload: ProposeRequest, request: Request) -> dict[str, object]:
                 source_text=payload.text,
                 session_id=payload.session_id,
                 instruction=payload.instruction,
+            )
+        except Exception as exc:  # noqa: BLE001
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/days/{day_date}/edit-propose")
+def propose_day_edit(day_date: str, payload: DayEditRequest, request: Request) -> dict[str, object]:
+    user_id = _current_user_id(request)
+    cfg = request.app.state.config
+    session_factory = get_session_factory_from_app(request.app)
+    with session_factory() as db:
+        service = JournalWriteService(db, cfg)
+        try:
+            return service.propose_day_edit(
+                user_id=user_id,
+                day_date=day_date,
+                edited_content=payload.content,
+                session_id=payload.session_id,
             )
         except Exception as exc:  # noqa: BLE001
             raise HTTPException(status_code=400, detail=str(exc)) from exc

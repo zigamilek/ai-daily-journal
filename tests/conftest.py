@@ -13,7 +13,6 @@ from tests.helpers import make_config
 @pytest.fixture()
 def test_config(tmp_path: Path):
     config = make_config()
-    config.ai_daily_journal_projection.root_path = str((tmp_path / "projections").resolve())
     config.logging.log_dir = str((tmp_path / "logs").resolve())
     return config
 

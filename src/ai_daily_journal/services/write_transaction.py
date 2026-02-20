@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import hashlib
 from datetime import datetime, timezone
-from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -16,7 +15,7 @@ from ai_daily_journal.db.models import (
     WriteOperation,
     WriteSession,
 )
-from ai_daily_journal.services.projection_renderer import render_day_markdown, write_projection_atomic
+from ai_daily_journal.services.day_content import render_day_text
 from ai_daily_journal.services.semantic_search import SemanticSearchService
 
 
@@ -45,7 +44,6 @@ class WriteTransactionService:
         user_id: int,
         session_id: int,
         idempotency_key: str,
-        projection_root: Path,
     ) -> dict[str, object]:
         session = self.db.execute(
             select(WriteSession).where(
@@ -94,7 +92,7 @@ class WriteTransactionService:
                         .order_by(JournalEntry.sequence_no.asc())
                     ).scalars()
                 )
-                final_content = render_day_markdown(
+                final_content = render_day_text(
                     day.day_date, [entry.event_text_sl for entry in final_active]
                 )
             return {
@@ -126,7 +124,14 @@ class WriteTransactionService:
                 .order_by(JournalEntry.sequence_no.asc())
             ).scalars()
         )
-        active_by_sequence = {entry.sequence_no: entry for entry in active_entries}
+        replace_all = bool(operation.decision_json.get("replace_all", False))
+        if replace_all:
+            for active in active_entries:
+                self.db.delete(active)
+            self.db.flush()
+            active_by_sequence: dict[int, JournalEntry] = {}
+        else:
+            active_by_sequence = {entry.sequence_no: entry for entry in active_entries}
 
         proposed_entries = operation.proposed_entries_json
         for proposed in proposed_entries:
@@ -183,8 +188,7 @@ class WriteTransactionService:
                 .order_by(JournalEntry.sequence_no.asc())
             ).scalars()
         )
-        final_content = render_day_markdown(day.day_date, [entry.event_text_sl for entry in final_active])
-        write_projection_atomic(projection_root, day.day_date, final_content)
+        final_content = render_day_text(day.day_date, [entry.event_text_sl for entry in final_active])
         return {
             "status": "ok",
             "idempotent_replay": False,

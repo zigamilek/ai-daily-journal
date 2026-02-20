@@ -18,7 +18,6 @@ def make_config() -> AppConfig:
                 "max_overflow": 5,
                 "echo_sql": False,
             },
-            "ai_daily_journal_projection": {"root_path": "./projections", "atomic_write_mode": True},
             "models": {
                 "provider": "openai_compatible",
                 "coordinator": {

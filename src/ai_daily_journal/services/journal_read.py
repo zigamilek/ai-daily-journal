@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ai_daily_journal.db.models import JournalDay, JournalEntry
-from ai_daily_journal.services.projection_renderer import render_day_markdown
+from ai_daily_journal.services.day_content import render_day_text
 
 
 class JournalReadService:
@@ -49,4 +49,4 @@ class JournalReadService:
             .where(JournalEntry.day_id == day.id, JournalEntry.superseded_by_entry_id.is_(None))
             .order_by(JournalEntry.sequence_no.asc())
         ).scalars()
-        return render_day_markdown(day.day_date, [entry.event_text_sl for entry in entries])
+        return render_day_text(day.day_date, [entry.event_text_sl for entry in entries])

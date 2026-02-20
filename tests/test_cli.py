@@ -43,7 +43,6 @@ def test_diagnostics_command_with_sqlite(monkeypatch, tmp_path: Path) -> None:
     env_path = tmp_path / ".env"
     db_path = tmp_path / "diag.db"
     cfg = make_config()
-    cfg.ai_daily_journal_projection.root_path = str((tmp_path / "projections").resolve())
     cfg.logging.log_dir = str((tmp_path / "logs").resolve())
     config_path.write_text(yaml.safe_dump(cfg.model_dump(mode="json")), encoding="utf-8")
     env_path.write_text(f"AI_DAILY_JOURNAL_DB_URL=sqlite+pysqlite:///{db_path}\n", encoding="utf-8")

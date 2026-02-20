@@ -21,7 +21,6 @@ from ai_daily_journal.paths import (
     default_env_path,
     logs_dir,
     logs_file,
-    projection_root,
     prompts_dir,
     repo_root,
     style_guide_path,
@@ -85,7 +84,6 @@ def onboarding() -> None:
     host = typer.prompt("Server host", default="0.0.0.0")
     port = typer.prompt("Server port", default="8080")
     timezone = typer.prompt("Default timezone", default="Europe/Ljubljana")
-    projection_dir = typer.prompt("Projection root path", default="./projections")
     coordinator_model = typer.prompt("Coordinator model", default="gpt-4.1-mini")
     editor_model = typer.prompt("Editor model", default="gpt-4.1")
     embeddings_model = typer.prompt("Embeddings model", default="text-embedding-3-small")
@@ -103,9 +101,6 @@ database:
   pool_size: 10
   max_overflow: 20
   echo_sql: false
-ai_daily_journal_projection:
-  root_path: "{projection_dir}"
-  atomic_write_mode: true
 models:
   provider: "openai_compatible"
   coordinator:
@@ -265,17 +260,12 @@ def update() -> None:
 
 @app.command("paths")
 def paths() -> None:
-    cfg = load_config(default_config_path()) if default_config_path().exists() else None
-    projection = (
-        Path(cfg.ai_daily_journal_projection.root_path).resolve() if cfg else projection_root().resolve()
-    )
     _print_json(
         {
             "config_yaml": str(default_config_path().resolve()),
             "env_file": str(default_env_path().resolve()),
             "prompts_dir": str(prompts_dir().resolve()),
             "style_guide_file": str(style_guide_path().resolve()),
-            "markdown_projection_root": str(projection),
             "logs_dir": str(logs_dir().resolve()),
             "logs_file": str(logs_file().resolve()),
             "install_repo_path": str(repo_root().resolve()),
@@ -302,9 +292,6 @@ def diagnostics() -> None:
             "editor": cfg.models.editor.model_name,
             "embeddings": cfg.models.embeddings.model_name,
         }
-        payload["projection_writable"] = os.access(
-            Path(cfg.ai_daily_journal_projection.root_path).resolve(), os.W_OK
-        ) or not Path(cfg.ai_daily_journal_projection.root_path).exists()
         payload["service_urls"] = {
             "healthz": f"{cfg.server.public_base_url}/healthz",
             "readyz": f"{cfg.server.public_base_url}/readyz",

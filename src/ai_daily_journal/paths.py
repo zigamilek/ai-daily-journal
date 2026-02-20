@@ -40,9 +40,5 @@ def logs_file() -> Path:
     return logs_dir() / "ai-daily-journal.log"
 
 
-def projection_root() -> Path:
-    return repo_root() / "projections"
-
-
 def systemd_unit_path() -> Path:
     return Path("/etc/systemd/system/ai-daily-journal.service")
